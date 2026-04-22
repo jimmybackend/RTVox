@@ -1,0 +1,9 @@
+RTVox package validation
+
+Validated in this environment:
+- Python encoder -> Python decoder
+- C encoder -> C decoder
+- Python and C encoded bitstreams matched byte-for-byte on examples/test_input.wav
+- Python and C decoded WAV outputs matched byte-for-byte on examples/test_input.wav
+
+Rust source is included but was not compiled here because the Rust toolchain was not available in this environment.

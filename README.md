@@ -1,127 +1,178 @@
 # RTVox
-RTVox is an open-source real-time voice codec focused on intelligibility, low bitrate, packet-loss resilience, and easy integration. It includes interoperable encoder/decoder prototypes in C, Python, and Rust for research, VoIP experiments, and future standardization.
 
-# RTVox
+RTVox is an open-source experimental real-time voice codec focused on intelligibility, low bitrate operation, packet-loss resilience, and cross-language interoperability.
 
-RTVox is an open-source real-time voice codec project focused on intelligibility, low bitrate operation, packet-loss resilience, and cross-language interoperability.
+This repository includes the same proof-of-concept encoder/decoder implemented in:
 
-The goal of RTVox is not just to compress voice, but to preserve speech clarity in real-world calls under unstable network conditions, limited bandwidth, and low-latency requirements.
+- C
+- Python
+- Rust
 
-## Project Goals
+## What is included
 
-- Real-time voice transmission
-- Low bitrate operation
-- High intelligibility in bad network conditions
-- Packet-loss resilience
-- Simple and portable bitstream design
-- Open specification for public use
-- Reference implementations in:
-  - C
-  - Python
-  - Rust
+This ZIP contains a small interoperable prototype, not a production-ready codec.
 
-## Why RTVox
+The current bitstream is intentionally simple so it can be implemented in multiple languages and understood easily:
 
-Most traditional audio codecs are designed to balance quality and compression for general audio. RTVox is designed with a stronger focus on **voice calls**, where the most important factor is not perfect fidelity, but **understanding speech clearly**.
+- 16 kHz
+- mono
+- 16-bit PCM WAV input
+- 20 ms frames (320 samples)
+- 4 bytes per frame
+- deterministic decoder synthesis
+- same container format in C, Python, and Rust
 
-RTVox is being designed to explore:
+Each frame stores:
 
-- speech-first compression
-- adaptive bitrate strategies
-- packet-loss-aware voice reconstruction
-- low-complexity real-time encoding and decoding
-- interoperability across multiple programming languages
-- future integration with RTP, SIP, WebRTC, and VoIP platforms
+- quantized energy
+- quantized zero-crossing rate
+- quantized pitch
+- voiced/unvoiced flag
 
-## Current Status
+The decoder rebuilds a voice-like signal from those parameters.
 
-RTVox is currently in the **research and prototype stage**.
+## Important note
 
-This repository is intended to host:
+RTVox v0 is a research prototype.
+It is useful for:
 
-- the public codec specification
-- the reference bitstream format
-- encoder and decoder prototypes
-- test vectors
-- network-loss simulations
-- cross-language interoperability tests
+- testing repository structure
+- validating cross-language bitstream compatibility
+- experimenting with codec ideas
+- starting an open GitHub project
 
-## Planned Features
+It is not suitable yet for production VoIP calls.
 
-- Mono voice codec optimized for calls
-- 16 kHz voice mode
-- 20 ms frame size
-- Multiple bitrate profiles
-- Packet loss concealment (PLC)
-- Voice activity handling
-- Optional redundancy for critical speech frames
-- Portable C core
-- Python prototype for experiments
-- Rust implementation for modern systems integration
-
-## Target Use Cases
-
-- VoIP calls
-- SIP softphones
-- WebRTC experiments
-- embedded voice systems
-- low-bandwidth communication
-- unstable mobile or rural networks
-- research and academic audio coding work
-
-## Design Principles
-
-RTVox follows these principles:
-
-1. **Speech intelligibility first**  
-   The codec should prioritize understanding spoken words over preserving full audio fidelity.
-
-2. **Low latency**  
-   The codec should be usable in live calls and interactive systems.
-
-3. **Resilience over perfection**  
-   In poor conditions, the codec should remain understandable rather than fail gracefully into silence or distortion.
-
-4. **Open and interoperable**  
-   The format, bitstream, and implementations should be public and usable by anyone.
-
-5. **Portable implementation**  
-   The reference implementation should be lightweight and easy to build across systems.
-
-## Repository Structure
-
-Planned structure:
+## Repository layout
 
 ```text
 rtvox/
-├── docs/
-│   ├── spec-v0.md
-│   ├── bitstream.md
-│   ├── rtp-mapping.md
-│   └── test-vectors.md
-├── include/
-│   └── rtvox.h
-├── src/
-│   ├── encoder.c
-│   ├── decoder.c
-│   ├── bitstream.c
-│   ├── plc.c
-│   └── packet_loss.c
-├── python/
-│   ├── encoder.py
-│   ├── decoder.py
-│   └── tools/
-├── rust/
-│   ├── src/
-│   └── Cargo.toml
-├── tests/
-│   ├── roundtrip/
-│   ├── vectors/
-│   └── network-loss/
-├── examples/
-│   ├── cli/
-│   ├── rtp/
-│   └── voip/
-├── LICENSE
 ├── README.md
-└── CMakeLists.txt
+├── LICENSE
+├── CONTRIBUTING.md
+├── docs/
+│   └── spec-v0.md
+├── c/
+│   ├── CMakeLists.txt
+│   ├── include/
+│   │   └── rtvox.h
+│   └── src/
+│       ├── rtvox_common.c
+│       ├── rtvoxenc.c
+│       └── rtvoxdec.c
+├── python/
+│   ├── common.py
+│   ├── encoder.py
+│   └── decoder.py
+├── rust/
+│   ├── Cargo.toml
+│   └── src/
+│       ├── common.rs
+│       ├── encoder.rs
+│       ├── decoder.rs
+│       └── main.rs
+└── examples/
+    └── test_input.wav
+```
+
+## Bitstream summary
+
+Header:
+
+- magic: `RTVX`
+- version: `1`
+- sample rate code: `1` = 16000 Hz
+- channels: `1`
+- bytes per frame: `4`
+- frame samples: `320`
+- frame count: `u32 little-endian`
+
+Frame payload (4 bytes per frame):
+
+- byte 0: `level_q`
+- byte 1: `zcr_q`
+- byte 2: `pitch_q`
+- byte 3: flags (`bit0 = voiced`)
+
+## Build and run
+
+### Python
+
+Encode:
+
+```bash
+python3 python/encoder.py input.wav output.rtvx
+```
+
+Decode:
+
+```bash
+python3 python/decoder.py output.rtvx reconstructed.wav
+```
+
+### C
+
+Build:
+
+```bash
+cd c
+cmake -S . -B build
+cmake --build build
+```
+
+Encode:
+
+```bash
+./build/rtvoxenc input.wav output.rtvx
+```
+
+Decode:
+
+```bash
+./build/rtvoxdec output.rtvx reconstructed.wav
+```
+
+### Rust
+
+Build:
+
+```bash
+cd rust
+cargo build --release
+```
+
+Encode:
+
+```bash
+cargo run --release -- enc input.wav output.rtvx
+```
+
+Decode:
+
+```bash
+cargo run --release -- dec output.rtvx reconstructed.wav
+```
+
+## WAV requirements
+
+Current prototype input requirements:
+
+- PCM WAV
+- mono
+- 16-bit little-endian
+- 16 kHz
+
+## Validation done in this package
+
+Validated here:
+
+- Python encoder -> Python decoder
+- C encoder -> C decoder
+- Python encoder output matches C encoder output byte-for-byte on the included sample
+- Python decoder output matches C decoder output byte-for-byte on the included sample
+
+Rust source is included and follows the same bitstream specification, but it was not compiled inside this environment because the Rust toolchain was not available here.
+
+## License
+
+MIT License.
